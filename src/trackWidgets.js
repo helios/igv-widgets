@@ -1,6 +1,7 @@
 import ModalTable from '../node_modules/data-modal/js/modalTable.js'
 import EncodeTrackDatasource from "../node_modules/data-modal/js/encodeTrackDatasource.js"
-import { encodeTrackDatasourceConfigurator } from '../node_modules/data-modal/js/encodeTrackDatasourceConfig.js'
+import GenericMapDatasource from "../node_modules/data-modal/js/genericDataSource.js"
+import { encodeTrackDatasourceConfigurator } from  '../node_modules/data-modal/js/encodeTrackDatasourceConfig.js'
 import { encodeTrackDatasourceSignalConfigurator } from "../node_modules/data-modal/js/encodeTrackDatasourceSignalConfig.js"
 import { encodeTrackDatasourceOtherConfigurator } from "../node_modules/data-modal/js/encodeTrackDatasourceOtherConfig.js"
 import { createGenericSelectModal } from './genericSelectModal.js'
@@ -18,7 +19,7 @@ let multipleTrackFileLoad;
 let encodeModalTables = [];
 let customModalTables = [];
 let genomeChangeListener
-const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, customTrackModalIds, urlModalId, igvxhr, google, trackLoadHandler) => {
+const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, customTrackModalItems, urlModalId, igvxhr, google, trackLoadHandler) => {
 
     const $urlModal = $(createTrackURLModal(urlModalId))
     $igvMain.append($urlModal);
@@ -74,11 +75,11 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
 
     }
 
-    for (let customTrackModalId of customTrackModalIds) {
+    for (let customTrackModalItem of customTrackModalItems) {
 
         const customModalTableConfig =
             {
-                id: customTrackModalId,
+                id: customTrackModalItem.id,
                 title: 'CUSTOM',
                 selectionStyle: 'multi',
                 pageLength: 100,
@@ -102,9 +103,9 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
 
 }
 
-const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, customTrackModalIds, urlModalId, selectModalId, igvxhr, google, GtexUtils, trackRegistryFile, trackLoadHandler) => {
+const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, customTrackModalItems, urlModalId, selectModalId, igvxhr, google, GtexUtils, trackRegistryFile, trackLoadHandler) => {
 
-    createTrackWidgets($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, customTrackModalIds, urlModalId, igvxhr, google, trackLoadHandler)
+    createTrackWidgets($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, customTrackModalItems, urlModalId, igvxhr, google, trackLoadHandler)
 
     const $genericSelectModal = $(createGenericSelectModal(selectModalId, `${ selectModalId }-select`));
     $igvMain.append($genericSelectModal);
@@ -156,7 +157,7 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
                 console.log(`ENCODE DOES NOT support genome ${ genomeID }`)
             }
 
-            await updateTrackMenus(genomeID, GtexUtils, encodeIsSupported, encodeModalTables, customModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal);
+            await updateTrackMenus(genomeID, GtexUtils, encodeIsSupported, encodeModalTables, customModalTables, customTrackModalItems, trackRegistryFile, $dropdownMenu, $genericSelectModal);
         }
     }
 
@@ -164,7 +165,7 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
 
 }
 
-const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeModalTables, customModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal) => {
+const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeModalTables, customModalTables, customModalTrackItems, trackRegistryFile, $dropdownMenu, $genericSelectModal) => {
 
     const id_prefix = 'genome_specific_';
 
@@ -223,13 +224,11 @@ const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeMo
             }
 
         } else if ('CUSTOM' == json.type) {
-	    console.log(`CUSTOM ${ json.label }`);
-	    let config = encodeTrackDatasourceSignalConfigurator(genomeID);
-	    config['suffix'] = json.suffix;
-	    config['urlPrefix'] = json.urlPrefix;
-	    config['dataSetPathPrefix'] = json.dataSetPathPrefix;
-	    customModalTables[customModalTablesIndex++].setDatasource( new EncodeTrackDatasource(config) );
-	    customModalTables[customModalTablesIndex-1].title = json.label;
+	    let configCustomModalTable = customModalTrackItems[customModalTablesIndex].configurator(genomeID);
+	    let config = {...configCustomModalTable, ...json.configurator};
+	    customModalTables[customModalTablesIndex].setDatasource( new GenericMapDatasource(config) );
+	    customModalTables[customModalTablesIndex].title = json.label;
+	    customModalTablesIndex++;
 	    buttonConfigurations.push(json);	
 	}  else {
             buttonConfigurations.push(json);
@@ -260,7 +259,7 @@ const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeMo
 
     if (customModalTablesIndex > 0 ) {
 	for (let i = 0; i < customModalTablesIndex; i++) {
-	    console.log(customModalTables[i]);
+	    //console.log(customModalTables[i]);
 	    createDropdownButton($divider, customModalTables[i].title, id_prefix)
 		.on('click', () => customModalTables[i].$modal.modal('show'));
 	}

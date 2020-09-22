@@ -107,6 +107,81 @@ const icons = {
     "wrench": [512, 512, [], "f0ad", "M481.156 200c9.3 0 15.12 10.155 10.325 18.124C466.295 259.992 420.419 288 368 288c-79.222 0-143.501-63.974-143.997-143.079C223.505 65.469 288.548-.001 368.002 0c52.362.001 98.196 27.949 123.4 69.743C496.24 77.766 490.523 88 481.154 88H376l-40 56 40 56h105.156zm-171.649 93.003L109.255 493.255c-24.994 24.993-65.515 24.994-90.51 0-24.993-24.994-24.993-65.516 0-90.51L218.991 202.5c16.16 41.197 49.303 74.335 90.516 90.503zM104 432c0-13.255-10.745-24-24-24s-24 10.745-24 24 10.745 24 24 24 24-10.745 24-24z"],
 };
 
+/**
+ * Make the target element movable by clicking and dragging on the handle.  This is not a general purprose function,
+ * it makes several options specific to igv dialogs, the primary one being that the
+ * target is absolutely positioned in pixel coordinates
+
+ */
+
+let dragData;   // Its assumed we are only dragging one element at a time.
+
+
+function makeDraggable(target, handle) {
+    handle.addEventListener('mousedown', dragStart.bind(target));
+}
+
+
+function dragStart(event) {
+
+    event.stopPropagation();
+    event.preventDefault();
+
+    const pageCoords = offset(this);
+    const dragFunction = drag.bind(this);
+    const dragEndFunction = dragEnd.bind(this);
+    const computedStyle = getComputedStyle(this);
+    const top = parseInt(computedStyle.top.replace("px", ""));
+    const left = parseInt(computedStyle.left.replace("px", ""));
+
+    dragData =
+        {
+            dragFunction: dragFunction,
+            dragEndFunction: dragEndFunction,
+            screenX: event.screenX,
+            screenY: event.screenY,
+            top: top,
+            left: left
+        };
+
+    document.addEventListener('mousemove', dragFunction);
+    document.addEventListener('mouseup', dragEndFunction);
+    document.addEventListener('mouseleave', dragEndFunction);
+    document.addEventListener('mouseexit', dragEndFunction);
+}
+
+function drag(event) {
+
+    if (!dragData) {
+        console.log("No drag data!");
+        return;
+    }
+    event.stopPropagation();
+    event.preventDefault();
+    const dx = event.screenX - dragData.screenX;
+    const dy = event.screenY - dragData.screenY;
+    this.style.left = `${dragData.left + dx}px`;
+    this.style.top = `${dragData.top + dy}px`;
+}
+
+function dragEnd(event) {
+
+    if (!dragData) {
+        console.log("No drag data!");
+        return;
+    }
+    event.stopPropagation();
+    event.preventDefault();
+
+    const dragFunction = dragData.dragFunction;
+    const dragEndFunction = dragData.dragEndFunction;
+    document.removeEventListener('mousemove', dragFunction);
+    document.removeEventListener('mouseup', dragEndFunction);
+    document.removeEventListener('mouseleave', dragEndFunction);
+    document.removeEventListener('mouseexit', dragEndFunction);
+    dragData = undefined;
+}
+
 function attachDialogCloseHandlerWithParent(parent, closeHandler) {
 
     var container = document.createElement("div");
@@ -1884,7 +1959,7 @@ Zlib.RawInflate.prototype.concatBufferBlock = function() {
 
   // single buffer
   if (blocks.length === 0) {
-    return         this.output.subarray(Zlib.RawInflate.MaxBackwardLength, this.op) ;
+    return         this.output.subarray(Zlib.RawInflate.MaxBackwardLength, this.op) ;
   }
 
   // copy to buffer
@@ -5800,81 +5875,6 @@ if (typeof process === 'object' && typeof window === 'undefined') {
     };
 }
 
-/**
- * Make the target element movable by clicking and dragging on the handle.  This is not a general purprose function,
- * it makes several options specific to igv dialogs, the primary one being that the
- * target is absolutely positioned in pixel coordinates
-
- */
-
-let dragData;   // Its assumed we are only dragging one element at a time.
-
-
-function makeDraggable(target, handle) {
-    handle.addEventListener('mousedown', dragStart.bind(target));
-}
-
-
-function dragStart(event) {
-
-    event.stopPropagation();
-    event.preventDefault();
-
-    const pageCoords = offset(this);
-    const dragFunction = drag.bind(this);
-    const dragEndFunction = dragEnd.bind(this);
-    const computedStyle = getComputedStyle(this);
-    const top = parseInt(computedStyle.top.replace("px", ""));
-    const left = parseInt(computedStyle.left.replace("px", ""));
-
-    dragData =
-        {
-            dragFunction: dragFunction,
-            dragEndFunction: dragEndFunction,
-            screenX: event.screenX,
-            screenY: event.screenY,
-            top: top,
-            left: left
-        };
-
-    document.addEventListener('mousemove', dragFunction);
-    document.addEventListener('mouseup', dragEndFunction);
-    document.addEventListener('mouseleave', dragEndFunction);
-    document.addEventListener('mouseexit', dragEndFunction);
-}
-
-function drag(event) {
-
-    if (!dragData) {
-        console.log("No drag data!");
-        return;
-    }
-    event.stopPropagation();
-    event.preventDefault();
-    const dx = event.screenX - dragData.screenX;
-    const dy = event.screenY - dragData.screenY;
-    this.style.left = `${dragData.left + dx}px`;
-    this.style.top = `${dragData.top + dy}px`;
-}
-
-function dragEnd(event) {
-
-    if (!dragData) {
-        console.log("No drag data!");
-        return;
-    }
-    event.stopPropagation();
-    event.preventDefault();
-
-    const dragFunction = dragData.dragFunction;
-    const dragEndFunction = dragData.dragEndFunction;
-    document.removeEventListener('mousemove', dragFunction);
-    document.removeEventListener('mouseup', dragEndFunction);
-    document.removeEventListener('mouseleave', dragEndFunction);
-    document.removeEventListener('mouseexit', dragEndFunction);
-    dragData = undefined;
-}
-
 const httpMessages =
     {
         "401": "Access unauthorized",
@@ -7091,7 +7091,7 @@ class FileLoadManager {
 
     dragDropHandler (dataTransfer, isIndexFile) {
         var url,
-            files;
+            files;
 
         url = dataTransfer.getData('text/uri-list');
         files = dataTransfer.files;
@@ -9668,8 +9668,9 @@ const createTrackURLModal = id => {
 let fileLoadWidget$1;
 let multipleTrackFileLoad;
 let encodeModalTables = [];
+let customModalTables = [];
 let genomeChangeListener;
-const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, igvxhr, google, trackLoadHandler) => {
+const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, customTrackModalItems, urlModalId, igvxhr, google, trackLoadHandler) => {
 
     const $urlModal = $(createTrackURLModal(urlModalId));
     $igvMain.append($urlModal);
@@ -9725,6 +9726,21 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
 
     }
 
+    for (let customTrackModalItem of customTrackModalItems) {
+
+        const customModalTableConfig =
+            {
+                id: customTrackModalItem.id,
+                title: 'CUSTOM',
+                selectionStyle: 'multi',
+                pageLength: 100,
+                selectHandler: trackLoadHandler
+            };
+
+        customModalTables.push( new ModalTable(customModalTableConfig) );
+
+    }
+
     genomeChangeListener = {
 
         receiveEvent: async ({ data }) => {
@@ -9738,9 +9754,9 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
 
 };
 
-const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, selectModalId, igvxhr, google, GtexUtils, trackRegistryFile, trackLoadHandler) => {
+const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, customTrackModalItems, urlModalId, selectModalId, igvxhr, google, GtexUtils, trackRegistryFile, trackLoadHandler) => {
 
-    createTrackWidgets($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, igvxhr, google, trackLoadHandler);
+    createTrackWidgets($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, customTrackModalItems, urlModalId, igvxhr, google, trackLoadHandler);
 
     const $genericSelectModal = $(createGenericSelectModal(selectModalId, `${ selectModalId }-select`));
     $igvMain.append($genericSelectModal);
@@ -9792,7 +9808,7 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
                 console.log(`ENCODE DOES NOT support genome ${ genomeID }`);
             }
 
-            await updateTrackMenus(genomeID, GtexUtils, encodeIsSupported, encodeModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal);
+            await updateTrackMenus(genomeID, GtexUtils, encodeIsSupported, encodeModalTables, customModalTables, customTrackModalItems, trackRegistryFile, $dropdownMenu, $genericSelectModal);
         }
     };
 
@@ -9800,7 +9816,7 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
 
 };
 
-const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal) => {
+const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeModalTables, customModalTables, customModalTrackItems, trackRegistryFile, $dropdownMenu, $genericSelectModal) => {
 
     const id_prefix = 'genome_specific_';
 
@@ -9832,6 +9848,7 @@ const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeMo
     }
 
     let buttonConfigurations = [];
+    let customModalTablesIndex = 0;
 
     for (let json of jsons) {
 
@@ -9857,14 +9874,21 @@ const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeMo
                 buttonConfigurations.push(json);
             }
 
-        } else {
+        } else if ('CUSTOM' == json.type) {
+	    let configCustomModalTable = customModalTrackItems[customModalTablesIndex].configurator(genomeID);
+	    let config = {...configCustomModalTable, ...json.configurator};
+	    customModalTables[customModalTablesIndex].setDatasource( new GenericMapDatasource(config) );
+	    customModalTables[customModalTablesIndex].title = json.label;
+	    customModalTablesIndex++;
+	    buttonConfigurations.push(json);	
+	}  else {
             buttonConfigurations.push(json);
         }
 
     } // for (json)
     let configurations = [];
     for (let config of buttonConfigurations) {
-        if (config.type && 'ENCODE' === config.type) ; else {
+        if (config.type && 'ENCODE' === config.type) ; else if (config.type && 'CUSTOM' == config.type) ; else {
             configurations.unshift(config);
         }
     }
@@ -9877,6 +9901,14 @@ const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeMo
         createDropdownButton($divider, 'ENCODE Signals', id_prefix)
             .on('click', () => encodeModalTables[ 0 ].$modal.modal('show'));
 
+    }
+
+    if (customModalTablesIndex > 0 ) {
+	for (let i = 0; i < customModalTablesIndex; i++) {
+	    //console.log(customModalTables[i]);
+	    createDropdownButton($divider, customModalTables[i].title, id_prefix)
+		.on('click', () => customModalTables[i].$modal.modal('show'));
+	}
     }
 
     for (let config of configurations) {
